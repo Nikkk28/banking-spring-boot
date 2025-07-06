@@ -30,8 +30,13 @@ public class AuthService {
             throw new BankingException("Username already exists");
         }
 
+        if (userRepository.existsByEmail(request.getEmail())) {  // Added email check
+            throw new BankingException("Email already exists");
+        }
+
         User user = new User();
         user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());  // Added email setting
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.CUSTOMER);
         user.setCreatedAt(LocalDateTime.now());
@@ -41,8 +46,12 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
+        // Find user by email first to get username for authentication
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BankingException("Invalid email or password"));
+
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(user.getUsername(), request.getPassword())
         );
 
         String token = jwtService.generateToken(authentication.getName());
